@@ -17,6 +17,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: "https://ocsgblhsxthndyqzpugr.supabase.co"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jc2dibGhzeHRobmR5cXpwdWdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNTY3NzUsImV4cCI6MjA4ODczMjc3NX0.HLn_vL0nfcE6pB12B9ss6WN4F3hbu555tZaWjmGIy-I"
+      NEXT_PUBLIC_SHEET_CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vS6FsKfgWJxQBzkKSP3ekD-Tbb7bfvGs_Df9aUT9bkv8gPL8dySYVkMmFdlajdrgxLZUs3pufrc0ZX8/pub?gid=1274849389&single=true&output=csv"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
