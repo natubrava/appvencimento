@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[2306,["/appvencimento/_next/static/chunks/0a1a3a6dc11bd187.js","/appvencimento/_next/static/chunks/d0650bf4f6c455ef.js","/appvencimento/_next/static/chunks/52c2a288c50b2d69.js","/appvencimento/_next/static/chunks/9d92eb3d183cb324.js"],"default"]
+3:I[97367,["/appvencimento/_next/static/chunks/ff1a16fafef87110.js","/appvencimento/_next/static/chunks/d2be314c3ece3fbe.js"],"OutletBoundary"]
+4:"$Sreact.suspense"
+0:{"buildId":"DfXBbSBmk5FMDiZs-4T7y","rsc":["$","$1","c",{"children":[["$","$L2",null,{}],[["$","script","script-0",{"src":"/appvencimento/_next/static/chunks/52c2a288c50b2d69.js","async":true}],["$","script","script-1",{"src":"/appvencimento/_next/static/chunks/9d92eb3d183cb324.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"loading":null,"isPartial":false}
+5:null

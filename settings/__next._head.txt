@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[97367,["/appvencimento/_next/static/chunks/ff1a16fafef87110.js","/appvencimento/_next/static/chunks/d2be314c3ece3fbe.js"],"ViewportBoundary"]
+3:I[97367,["/appvencimento/_next/static/chunks/ff1a16fafef87110.js","/appvencimento/_next/static/chunks/d2be314c3ece3fbe.js"],"MetadataBoundary"]
+4:"$Sreact.suspense"
+5:I[27201,["/appvencimento/_next/static/chunks/ff1a16fafef87110.js","/appvencimento/_next/static/chunks/d2be314c3ece3fbe.js"],"IconMark"]
+0:{"buildId":"DfXBbSBmk5FMDiZs-4T7y","rsc":["$","$1","h",{"children":[null,["$","$L2",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"}]]}],["$","div",null,{"hidden":true,"children":["$","$L3",null,{"children":["$","$4",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"NatuBrava - Controle de Vencimentos"}],["$","meta","1",{"name":"description","content":"Sistema de controle de vencimento de produtos para a loja NatuBrava Produtos Naturais"}],["$","link","2",{"rel":"manifest","href":"/manifest.json"}],["$","link","3",{"rel":"icon","href":"/favicon.ico"}],["$","link","4",{"rel":"apple-touch-icon","href":"/icons/icon-192x192.png"}],["$","$L5","5",{}]]}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"loading":null,"isPartial":false}
