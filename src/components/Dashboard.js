@@ -152,14 +152,14 @@ export default function Dashboard() {
                             const status = getExpiryStatus(record.expiry_date, record.alert_yellow_days, record.alert_red_days);
                             const days = daysUntilExpiry(record.expiry_date);
 
-                            const product = products.find(p => p.sku === record.sku);
+                            const product = products.find(p => String(p.sku) === String(record.sku));
                             
                             // Calcula total de todos os vencimentos ativos desse produto
                             const totalQtySubmissions = stats.records
-                                .filter(r => r.sku === record.sku && r.status === 'active')
-                                .reduce((sum, r) => sum + (r.quantity || 1), 0);
+                                .filter(r => String(r.sku) === String(record.sku) && r.status === 'active')
+                                .reduce((sum, r) => sum + (Number(r.quantity) || 1), 0);
                             
-                            const isStockDiscrepancy = product && (product.stock < totalQtySubmissions);
+                            const isStockDiscrepancy = product && (Number(product.stock) < totalQtySubmissions);
 
                             return (
                                 <div key={record.id} className={`urgent-item urgent-${status}`}>
@@ -225,7 +225,7 @@ export default function Dashboard() {
 
             {showEditModal && selectedRecord && (
                 <ExpiryModal
-                    product={{ sku: selectedRecord.sku, name: selectedRecord.product_name }}
+                    product={products.find(p => String(p.sku) === String(selectedRecord.sku)) || { sku: selectedRecord.sku, name: selectedRecord.product_name, stock: 0 }}
                     initialData={selectedRecord}
                     onClose={() => { setShowEditModal(false); setSelectedRecord(null); }}
                     onComplete={handleEditComplete}
@@ -236,8 +236,8 @@ export default function Dashboard() {
                 <ZeroStockModal
                     product={selectedProduct}
                     recordsCount={stats.records
-                        .filter(r => r.sku === selectedProduct.sku && r.status === 'active')
-                        .reduce((sum, r) => sum + (r.quantity || 1), 0)}
+                        .filter(r => String(r.sku) === String(selectedProduct.sku) && r.status === 'active')
+                        .reduce((sum, r) => sum + (Number(r.quantity) || 1), 0)}
                     onClose={() => { setShowZeroStockModal(false); setSelectedProduct(null); }}
                     onComplete={handleZeroStockComplete}
                 />
