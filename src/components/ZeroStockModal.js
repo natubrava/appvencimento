@@ -34,44 +34,23 @@ export default function ZeroStockModal({ product, recordsCount, onClose, onCompl
 
                 <div className="modal-body">
                     <p style={{ marginBottom: '15px' }}>
-                        A planilha informa que o estoque deste produto está zerado, mas o App possui <strong>{recordsCount} registro(s) ativo(s)</strong> dele.
+                        A planilha informa que o estoque deste produto é de <strong>{product.stock || 0} unidade(s)</strong>, mas o App possui <strong>{recordsCount} unidade(s)</strong> nos vencimentos ativos.
+                    </p>
+                    <p style={{ marginBottom: '20px', fontSize: '0.9em', color: '#b45309', fontWeight: 'bold' }}>
+                        ⚠️ Diferença encontrada: {recordsCount - (product.stock || 0)} unidade(s) a mais no App.
                     </p>
                     <p style={{ marginBottom: '20px', fontSize: '0.9em', color: '#666' }}>
-                        O que aconteceu com esses produtos que saíram do estoque?
+                        Para corrigir, feche este aviso e utilize os botões ✏️ (Editar) ou ✓ (Resolver) nos itens da lista para dar baixa apenas nas unidades que saíram do estoque físico.
                     </p>
-
-                    <div className="form-group">
-                        <label className="form-label">Observações sobre a saída (Opcional)</label>
-                        <input
-                            type="text"
-                            className="form-control"
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                            placeholder="Ex: Lote devolvido, Vendido no balcão..."
-                            disabled={saving}
-                        />
-                    </div>
-
-                    {error && <div className="form-error">{error}</div>}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
                         <button 
                             type="button" 
-                            className="btn btn-primary" 
-                            onClick={() => handleResolveAll('sold')} 
-                            disabled={saving}
-                            style={{ width: '100%', justifyContent: 'center' }}
-                        >
-                            {saving ? 'Atualizando...' : '💰 Foram todos Vendidos'}
-                        </button>
-                        <button 
-                            type="button" 
                             className="btn btn-secondary" 
-                            onClick={() => handleResolveAll('discarded')} 
-                            disabled={saving}
+                            onClick={onClose} 
                             style={{ width: '100%', justifyContent: 'center' }}
                         >
-                            {saving ? 'Atualizando...' : '🗑️ Foram todos Descartados'}
+                            Entendi, vou ajustar individualmente
                         </button>
                     </div>
                 </div>

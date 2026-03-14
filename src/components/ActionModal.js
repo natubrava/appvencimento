@@ -7,6 +7,7 @@ import { formatDate } from '@/lib/utils';
 export default function ActionModal({ record, onClose, onComplete }) {
     const [action, setAction] = useState('');
     const [notes, setNotes] = useState(record.notes || '');
+    const [quantityToResolve, setQuantityToResolve] = useState(record.quantity || 1);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
@@ -24,10 +25,23 @@ export default function ActionModal({ record, onClose, onComplete }) {
             return;
         }
 
+        if (quantityToResolve <= 0 || quantityToResolve > record.quantity) {
+            setError(`Quantidade inválida. Escolha entre 1 e ${record.quantity}`);
+            return;
+        }
+
         try {
             setSaving(true);
             setError('');
-            await updateExpiryStatus(record.id, action, notes);
+            
+            if (quantityToResolve < record.quantity) {
+                // Resolução parcial
+                await import('@/lib/supabase').then(m => m.resolvePartialQuantity(record.id, quantityToResolve, action, notes));
+            } else {
+                // Resolução total
+                await updateExpiryStatus(record.id, action, notes);
+            }
+            
             onComplete();
         } catch (err) {
             setError('Erro ao atualizar: ' + err.message);
@@ -76,6 +90,33 @@ export default function ActionModal({ record, onClose, onComplete }) {
                             ))}
                         </div>
                     </div>
+
+                    {record.quantity > 1 && (
+                        <div className="form-group" style={{ marginTop: '15px' }}>
+                            <label htmlFor="resolve-qty">Quantas unidades saíram? (Max: {record.quantity})</label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <input
+                                    id="resolve-qty"
+                                    type="number"
+                                    min="1"
+                                    max={record.quantity}
+                                    className="form-control"
+                                    value={quantityToResolve}
+                                    onChange={(e) => setQuantityToResolve(parseInt(e.target.value) || 1)}
+                                    style={{ width: '80px' }}
+                                    disabled={saving}
+                                />
+                                <span style={{ fontSize: '0.9em', color: '#666' }}>
+                                    unidade(s) de um total de {record.quantity}
+                                </span>
+                            </div>
+                            {quantityToResolve < record.quantity && (
+                                <p style={{ fontSize: '0.85em', color: '#b45309', marginTop: '5px' }}>
+                                    ℹ️ Restarão {record.quantity - quantityToResolve} unidades ativas para este vencimento.
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     <div className="form-group">
                         <label htmlFor="action-notes">Observações (opcional)</label>

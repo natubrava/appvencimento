@@ -98,6 +98,52 @@ export async function updateExpiryStatus(id, status, notes = '') {
     return data;
 }
 
+export async function resolvePartialQuantity(id, quantityToResolve, status, notes = '') {
+    // 1. Get current record
+    const { data: record, error: getError } = await supabase
+        .from('expiry_records')
+        .select('*')
+        .eq('id', id)
+        .single();
+    
+    if (getError) throw getError;
+
+    const currentQty = Number(record.quantity) || 1;
+    
+    if (quantityToResolve >= currentQty) {
+        // Resolve the whole thing
+        return await updateExpiryStatus(id, status, notes);
+    }
+
+    // 2. Update current record to have remaining quantity
+    const { error: updateError } = await supabase
+        .from('expiry_records')
+        .update({ quantity: currentQty - quantityToResolve })
+        .eq('id', id);
+    
+    if (updateError) throw updateError;
+
+    // 3. Create a new RESOLVED record for the quantity that left
+    // This maintains historical data if needed, or we could just skip this bit
+    // if the user doesn't care about history. The user said: 
+    // "continuar somente com aquela outra unidade que ficou ainda"
+    // So we just subtracted from the main one. We'll insert a resolved record for consistency.
+    const { data, error: insertError } = await supabase
+        .from('expiry_records')
+        .insert([{
+            ...record,
+            id: undefined, // Let Supabase generate new UI
+            quantity: quantityToResolve,
+            status: status,
+            notes: notes ? `${notes} (Movimentação Parcial)` : 'Movimentação Parcial'
+        }])
+        .select()
+        .single();
+    
+    if (insertError) throw insertError;
+    return data;
+}
+
 export async function resolveAllExpiriesForSku(sku, status, notes = '') {
     const updateData = { status };
     if (notes) updateData.notes = notes;
