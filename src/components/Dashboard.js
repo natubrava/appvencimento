@@ -1,24 +1,33 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { fetchProducts } from '@/lib/sheets';
 import { getDashboardStats } from '@/lib/supabase';
 import { getExpiryStatus, daysUntilExpiry, formatDate, getStatusLabel } from '@/lib/utils';
 import ExpiryModal from './ExpiryModal';
 import ActionModal from './ActionModal';
+import ZeroStockModal from './ZeroStockModal';
 
 export default function Dashboard() {
     const [stats, setStats] = useState({ total: 0, expired: 0, urgent: 0, warning: 0, ok: 0, records: [] });
+    const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedRecord, setSelectedRecord] = useState(null);
+    const [selectedProduct, setSelectedProduct] = useState(null);
     const [showActionModal, setShowActionModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
+    const [showZeroStockModal, setShowZeroStockModal] = useState(false);
 
     async function loadStats() {
         try {
             setLoading(true);
-            const data = await getDashboardStats();
+            const [data, prods] = await Promise.all([
+                getDashboardStats(),
+                fetchProducts()
+            ]);
             setStats(data);
+            setProducts(prods);
             setError(null);
         } catch (err) {
             setError('Erro ao carregar dados: ' + err.message);
@@ -50,6 +59,17 @@ export default function Dashboard() {
     function handleEditComplete() {
         setShowEditModal(false);
         setSelectedRecord(null);
+        loadStats();
+    }
+
+    function handleZeroStockResolve(product) {
+        setSelectedProduct(product);
+        setShowZeroStockModal(true);
+    }
+
+    function handleZeroStockComplete() {
+        setShowZeroStockModal(false);
+        setSelectedProduct(null);
         loadStats();
     }
 
@@ -132,6 +152,9 @@ export default function Dashboard() {
                             const status = getExpiryStatus(record.expiry_date, record.alert_yellow_days, record.alert_red_days);
                             const days = daysUntilExpiry(record.expiry_date);
 
+                            const product = products.find(p => p.sku === record.sku);
+                            const isZeroStock = product && product.stock <= 0;
+
                             return (
                                 <div key={record.id} className={`urgent-item urgent-${status}`}>
                                     <div className="urgent-info">
@@ -153,6 +176,16 @@ export default function Dashboard() {
                                             <span className="urgent-date">{formatDate(record.expiry_date)}</span>
                                         </div>
                                         <div className="urgent-actions-mobile" style={{ display: 'flex', gap: '6px' }}>
+                                            {isZeroStock && (
+                                                <button 
+                                                    className="btn btn-sm btn-warning-outline"
+                                                    onClick={() => handleZeroStockResolve({ ...product, name: record.product_name })}
+                                                    title="Estoque Zerado (Resolver)"
+                                                    style={{ padding: '0 8px', borderColor: '#f59e0b', color: '#b45309', fontWeight: 'bold' }}
+                                                >
+                                                    ⚠️ Zerado
+                                                </button>
+                                            )}
                                             <button
                                                 className="btn btn-sm btn-action"
                                                 onClick={() => handleEdit(record)}
@@ -190,6 +223,15 @@ export default function Dashboard() {
                     initialData={selectedRecord}
                     onClose={() => { setShowEditModal(false); setSelectedRecord(null); }}
                     onComplete={handleEditComplete}
+                />
+            )}
+
+            {showZeroStockModal && selectedProduct && (
+                <ZeroStockModal
+                    product={selectedProduct}
+                    recordsCount={stats.records.filter(r => r.sku === selectedProduct.sku && r.status === 'active').length}
+                    onClose={() => { setShowZeroStockModal(false); setSelectedProduct(null); }}
+                    onComplete={handleZeroStockComplete}
                 />
             )}
         </div>

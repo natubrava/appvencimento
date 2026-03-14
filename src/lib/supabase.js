@@ -130,22 +130,37 @@ export async function getDashboardStats() {
 
     if (error) throw error;
 
+    const { data: settingsData } = await supabase
+        .from('settings')
+        .select('*')
+        .limit(1)
+        .single();
+    
+    // Fallbacks
+    const yellowDays = settingsData?.alert_yellow_days ?? 90;
+    const redDays = settingsData?.alert_red_days ?? 60;
+
     const records = data || [];
     const now = new Date();
     now.setHours(0, 0, 0, 0);
 
     let expired = 0;
-    let expiring = 0;
+    let urgent = 0;
+    let warning = 0;
     let ok = 0;
 
     records.forEach(record => {
-        const expiryDate = new Date(record.expiry_date + 'T00:00:00');
+        // Safe date parsing matching utils.js daysUntilExpiry
+        const [year, month, day] = record.expiry_date.split('-');
+        const expiryDate = new Date(year, month - 1, day, 0, 0, 0, 0);
         const diffDays = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
 
-        if (diffDays < 0) {
+        if (diffDays <= 0) {
             expired++;
-        } else if (diffDays <= record.alert_days) {
-            expiring++;
+        } else if (diffDays <= redDays) {
+            urgent++;
+        } else if (diffDays <= yellowDays) {
+            warning++;
         } else {
             ok++;
         }
@@ -154,7 +169,8 @@ export async function getDashboardStats() {
     return {
         total: records.length,
         expired,
-        expiring,
+        urgent,
+        warning,
         ok,
         records
     };
