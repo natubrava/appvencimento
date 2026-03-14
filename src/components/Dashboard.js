@@ -153,7 +153,13 @@ export default function Dashboard() {
                             const days = daysUntilExpiry(record.expiry_date);
 
                             const product = products.find(p => p.sku === record.sku);
-                            const isZeroStock = product && product.stock <= 0;
+                            
+                            // Calcula total de todos os vencimentos ativos desse produto
+                            const totalQtySubmissions = stats.records
+                                .filter(r => r.sku === record.sku && r.status === 'active')
+                                .reduce((sum, r) => sum + (r.quantity || 1), 0);
+                            
+                            const isStockDiscrepancy = product && (product.stock < totalQtySubmissions);
 
                             return (
                                 <div key={record.id} className={`urgent-item urgent-${status}`}>
@@ -176,14 +182,14 @@ export default function Dashboard() {
                                             <span className="urgent-date">{formatDate(record.expiry_date)}</span>
                                         </div>
                                         <div className="urgent-actions-mobile" style={{ display: 'flex', gap: '6px' }}>
-                                            {isZeroStock && (
+                                            {isStockDiscrepancy && (
                                                 <button 
                                                     className="btn btn-sm btn-warning-outline"
                                                     onClick={() => handleZeroStockResolve({ ...product, name: record.product_name })}
-                                                    title="Estoque Zerado (Resolver)"
+                                                    title="Divergência de Estoque (Resolver)"
                                                     style={{ padding: '0 8px', borderColor: '#f59e0b', color: '#b45309', fontWeight: 'bold' }}
                                                 >
-                                                    ⚠️ Zerado
+                                                    ⚠️ Estoque!
                                                 </button>
                                             )}
                                             <button
@@ -229,7 +235,9 @@ export default function Dashboard() {
             {showZeroStockModal && selectedProduct && (
                 <ZeroStockModal
                     product={selectedProduct}
-                    recordsCount={stats.records.filter(r => r.sku === selectedProduct.sku && r.status === 'active').length}
+                    recordsCount={stats.records
+                        .filter(r => r.sku === selectedProduct.sku && r.status === 'active')
+                        .reduce((sum, r) => sum + (r.quantity || 1), 0)}
                     onClose={() => { setShowZeroStockModal(false); setSelectedProduct(null); }}
                     onComplete={handleZeroStockComplete}
                 />

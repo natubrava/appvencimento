@@ -307,12 +307,14 @@ export default function ProductList({ defaultAlertDays = 30 }) {
                     const expiryInfo = getProductExpiryStatus(product.sku);
                     const productRecords = (expiryBySku[product.sku] || []).filter(r => r.status === 'active');
                     const isExpanded = expandedProduct === product.sku;
-                    const isZeroStockWarning = product.stock <= 0 && productRecords.length > 0;
+                    
+                    const totalRegisteredQty = productRecords.reduce((sum, r) => sum + (r.quantity || 1), 0);
+                    const isStockDiscrepancy = product && (product.stock < totalRegisteredQty);
 
                     return (
                         <div
                             key={`${product.sku}-${index}`}
-                            className={`product-card ${expiryInfo ? `product-${expiryInfo.status}` : ''} ${isZeroStockWarning ? 'product-zero-stock' : ''}`}
+                            className={`product-card ${expiryInfo ? `product-${expiryInfo.status}` : ''} ${isStockDiscrepancy ? 'product-zero-stock' : ''}`}
                         >
                             <div className="product-card-header">
                                 <div className="product-main-info">
@@ -359,14 +361,14 @@ export default function ProductList({ defaultAlertDays = 30 }) {
                                 </div>
                             </div>
 
-                            {/* Alerta de Estoque Zero com Vencimentos Ativos */}
-                            {product.stock <= 0 && productRecords.length > 0 && (
+                            {/* Divergência de Estoque vs Vencimentos Ativos */}
+                            {isStockDiscrepancy && (
                                 <div style={{ marginTop: '12px' }}>
                                     <button 
                                         className="btn btn-warning-outline"
                                         onClick={() => handleZeroStockResolve(product)}
                                     >
-                                        ⚠️ Estoque Zerado (Resolver Pendências)
+                                        ⚠️ Divergência de Estoque (Resolver)
                                     </button>
                                 </div>
                             )}
@@ -492,7 +494,9 @@ export default function ProductList({ defaultAlertDays = 30 }) {
             {showZeroStockModal && selectedProduct && (
                 <ZeroStockModal
                     product={selectedProduct}
-                    recordsCount={(expiryBySku[selectedProduct.sku] || []).filter(r => r.status === 'active').length}
+                    recordsCount={(expiryBySku[selectedProduct.sku] || [])
+                        .filter(r => r.status === 'active')
+                        .reduce((sum, r) => sum + (r.quantity || 1), 0)}
                     onClose={() => { setShowZeroStockModal(false); setSelectedProduct(null); }}
                     onComplete={handleZeroStockComplete}
                 />
