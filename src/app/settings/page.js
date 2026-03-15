@@ -11,7 +11,9 @@ export default function SettingsPage() {
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [testingEmail, setTestingEmail] = useState(false);
     const [message, setMessage] = useState('');
+    const [emailMessage, setEmailMessage] = useState('');
 
     useEffect(() => {
         loadSettings();
@@ -48,6 +50,30 @@ export default function SettingsPage() {
             setMessage('❌ Erro ao salvar: ' + err.message);
         } finally {
             setSaving(false);
+        }
+    }
+
+    async function handleTestEmail() {
+        try {
+            setTestingEmail(true);
+            setEmailMessage('');
+            const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/daily-expiry-report`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Erro desconhecido ao enviar e-mail');
+            }
+            setEmailMessage(`✅ ${data.message || 'E-mail enviado com sucesso!'}`);
+            setTimeout(() => setEmailMessage(''), 5000);
+        } catch (err) {
+            setEmailMessage('❌ Erro ao testar envio: ' + err.message);
+        } finally {
+            setTestingEmail(false);
         }
     }
 
@@ -159,6 +185,29 @@ export default function SettingsPage() {
                 >
                     ⚙️ Configurar Regras de Notificação
                 </a>
+            </div>
+
+            <div className="settings-card">
+                <h2 className="settings-section-title">✉️ Testar E-mail de Alertas</h2>
+                <div className="settings-about">
+                    <p>Use este botão para disparar manualmente o envio do e-mail diário com os alertas atuais. Ideal para verificar se o serviço de e-mail está funcionando corretamente após fazer alterações.</p>
+                </div>
+                
+                {emailMessage && (
+                    <div className={`alert ${emailMessage.includes('✅') ? 'alert-success' : 'alert-error'}`} style={{ marginTop: '16px' }}>
+                        {emailMessage}
+                    </div>
+                )}
+
+                <button 
+                    type="button" 
+                    className="btn btn-primary" 
+                    style={{ marginTop: '16px' }}
+                    onClick={handleTestEmail}
+                    disabled={testingEmail}
+                >
+                    {testingEmail ? 'Enviando...' : '📧 Disparar E-mail Agora'}
+                </button>
             </div>
 
             <div className="settings-card">
