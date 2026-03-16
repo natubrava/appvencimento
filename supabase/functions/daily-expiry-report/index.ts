@@ -67,13 +67,33 @@ serve(async (req) => {
             const diffTime = (objDateLocal.getTime() - todayLocal.getTime());
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-            if (diffDays <= alertYellowDays) {
-                expiringItems.push({...record, days: diffDays, expDateObj: objDateLocal});
+            let status = 'ok';
+            let statusColor = '#10b981'; // green
+            let statusBg = '#ecfdf5';
+            let statusLabel = 'No Prazo';
+
+            if (diffDays < 0) {
+                status = 'vencido';
+                statusColor = '#fff';
+                statusBg = '#1f2937'; // black (preto)
+                statusLabel = 'Vencido';
+            } else if (diffDays <= alertRedDays) {
+                status = 'urgente';
+                statusColor = '#ef4444'; // red (vermelho)
+                statusBg = '#fef2f2';
+                statusLabel = 'Urgente';
+            } else if (diffDays <= alertYellowDays) {
+                status = 'atencao';
+                statusColor = '#f59e0b'; // yellow (amarelo)
+                statusBg = '#fffbeb';
+                statusLabel = 'Atenção';
             }
+
+            expiringItems.push({...record, days: diffDays, expDateObj: objDateLocal, status, statusColor, statusBg, statusLabel});
         });
 
         if (expiringItems.length === 0) {
-            return new Response(JSON.stringify({ message: "No items expiring soon or expired." }), { 
+            return new Response(JSON.stringify({ message: "No active products." }), { 
                 headers: { ...corsHeaders, "Content-Type": "application/json" } 
             })
         }
@@ -81,9 +101,12 @@ serve(async (req) => {
         // Sort items by expiration date (most overdue first)
         expiringItems.sort((a, b) => a.days - b.days);
 
-        const vencidosCount = expiringItems.filter(i => i.days < 0).length;
-        const hojeCount = expiringItems.filter(i => i.days === 0).length;
-        const proximosCount = expiringItems.filter(i => i.days > 0).length;
+        const totalCount = expiringItems.length;
+        const vencidosCount = expiringItems.filter(i => i.status === 'vencido').length;
+        const urgenteCount = expiringItems.filter(i => i.status === 'urgente').length;
+        const atencaoCount = expiringItems.filter(i => i.status === 'atencao').length;
+        const noPrazoCount = expiringItems.filter(i => i.status === 'ok').length;
+        const promocoesCount = expiringItems.filter(i => i.is_promoted).length;
 
         const reportDateObj = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
         const reportDateStr = `${String(reportDateObj.getDate()).padStart(2, '0')}/${String(reportDateObj.getMonth() + 1).padStart(2, '0')}/${reportDateObj.getFullYear()}`;
@@ -98,44 +121,72 @@ serve(async (req) => {
                     </div>
 
                     <!-- Summary Cards Container -->
-                    <div style="display: flex; justify-content: space-between; margin: -25px 20px 20px 20px; gap: 10px;">
+                    <div style="display: flex; flex-wrap: wrap; justify-content: center; margin: -25px 20px 20px 20px; gap: 8px;">
+                        <!-- Total -->
+                        <div style="background: #ffffff; border-radius: 8px; padding: 12px 5px; flex: 1 1 30%; min-width: 90px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="font-size: 22px; font-weight: bold; color: #4b5563; line-height: 1;">${totalCount}</div>
+                            <div style="font-size: 11px; color: #6b7280; margin-top: 5px; font-weight: bold; text-transform: uppercase;">Total</div>
+                        </div>
                         <!-- Vencidos -->
-                        <div style="background: #fff0f0; border-radius: 10px; padding: 15px 10px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            <div style="font-size: 26px; font-weight: bold; color: #e53935; line-height: 1;">${vencidosCount}</div>
-                            <div style="font-size: 13px; color: #9e9e9e; margin-top: 5px;">Vencidos</div>
+                        <div style="background: #1f2937; border-radius: 8px; padding: 12px 5px; flex: 1 1 30%; min-width: 90px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="font-size: 22px; font-weight: bold; color: #ffffff; line-height: 1;">${vencidosCount}</div>
+                            <div style="font-size: 11px; color: #d1d5db; margin-top: 5px; font-weight: bold; text-transform: uppercase;">Vencidos</div>
                         </div>
-                        <!-- Vencem Hoje -->
-                        <div style="background: #fff0f0; border-radius: 10px; padding: 15px 10px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            <div style="font-size: 26px; font-weight: bold; color: #e53935; line-height: 1;">${hojeCount}</div>
-                            <div style="font-size: 13px; color: #9e9e9e; margin-top: 5px;">Vencem Hoje</div>
+                        <!-- Urgentes -->
+                        <div style="background: #fef2f2; border-radius: 8px; padding: 12px 5px; flex: 1 1 30%; min-width: 90px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="font-size: 22px; font-weight: bold; color: #ef4444; line-height: 1;">${urgenteCount}</div>
+                            <div style="font-size: 11px; color: #ef4444; margin-top: 5px; font-weight: bold; text-transform: uppercase;">Urgente</div>
                         </div>
-                        <!-- Próximos -->
-                        <div style="background: #fffdf5; border-radius: 10px; padding: 15px 10px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            <div style="font-size: 26px; font-weight: bold; color: #fbc02d; line-height: 1;">${proximosCount}</div>
-                            <div style="font-size: 13px; color: #9e9e9e; margin-top: 5px;">Próximos</div>
+                        <!-- Atenção -->
+                        <div style="background: #fffbeb; border-radius: 8px; padding: 12px 5px; flex: 1 1 30%; min-width: 90px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="font-size: 22px; font-weight: bold; color: #f59e0b; line-height: 1;">${atencaoCount}</div>
+                            <div style="font-size: 11px; color: #f59e0b; margin-top: 5px; font-weight: bold; text-transform: uppercase;">Atenção</div>
+                        </div>
+                        <!-- No Prazo -->
+                        <div style="background: #ecfdf5; border-radius: 8px; padding: 12px 5px; flex: 1 1 30%; min-width: 90px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="font-size: 22px; font-weight: bold; color: #10b981; line-height: 1;">${noPrazoCount}</div>
+                            <div style="font-size: 11px; color: #10b981; margin-top: 5px; font-weight: bold; text-transform: uppercase;">No Prazo</div>
+                        </div>
+                        <!-- Promoção -->
+                        <div style="background: #fef08a; border-radius: 8px; padding: 12px 5px; flex: 1 1 30%; min-width: 90px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="font-size: 22px; font-weight: bold; color: #854d0e; line-height: 1;">${promocoesCount}</div>
+                            <div style="font-size: 11px; color: #854d0e; margin-top: 5px; font-weight: bold; text-transform: uppercase;">Promoções</div>
                         </div>
                     </div>
 
                     <!-- List -->
                     <div style="padding: 0 20px 20px;">
+                        <h3 style="font-size: 16px; color: #4b5563; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 8px;">Relatório de Produtos</h3>
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr style="border-bottom: 1px solid #eee;">
                                     <th style="text-align: left; padding-bottom: 15px; font-size: 12px; color: #757575; letter-spacing: 0.5px;">PRODUTO</th>
-                                    <th style="text-align: right; padding-bottom: 15px; font-size: 12px; color: #757575; letter-spacing: 0.5px;">VALIDADE</th>
+                                    <th style="text-align: right; padding-bottom: 15px; font-size: 12px; color: #757575; letter-spacing: 0.5px;">STATUS</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${expiringItems.map(item => {
                                     const expDateStr = String(item.expDateObj.getDate()).padStart(2, '0') + '/' + String(item.expDateObj.getMonth() + 1).padStart(2, '0') + '/' + item.expDateObj.getFullYear();
+                                    
+                                    let daysText = '';
+                                    if (item.status === 'vencido') daysText = `Vencido há ${Math.abs(item.days)} dia(s)`;
+                                    else if (item.status === 'urgente' || item.status === 'atencao') daysText = `Vence em ${item.days} dia(s)`;
+                                    else daysText = `Mais de ${item.days} dia(s)`;
+
+                                    const promoTagHtml = item.is_promoted ? `<span style="margin-top: 4px; display: inline-block; font-size: 10px; background-color: #fef08a; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: bold;">🟡 Em Promoção</span>` : '';
+
                                     return `
                                     <tr style="border-bottom: 1px solid #eee;">
                                         <td style="padding: 15px 0; padding-right: 15px;">
                                             <div style="font-weight: bold; font-size: 13px; color: #212121; line-height: 1.4; text-transform: uppercase;">${item.product_name}</div>
-                                            <div style="font-size: 12px; color: #9e9e9e; margin-top: 4px;">Lote: ${item.sku || '-'}</div>
+                                            <div style="font-size: 12px; color: #9e9e9e; margin-top: 4px;">${expDateStr} | Lote: ${item.sku || '-'}</div>
+                                            ${promoTagHtml}
                                         </td>
-                                        <td style="text-align: right; padding: 15px 0; font-size: 14px; color: #212121; vertical-align: top;">
-                                            ${expDateStr}
+                                        <td style="text-align: right; padding: 15px 0; vertical-align: middle;">
+                                            <div style="background-color: ${item.statusBg}; color: ${item.statusColor}; display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; border: 1px solid ${item.status === 'vencido' ? '#1f2937' : item.statusColor};">
+                                                ${item.statusLabel}
+                                            </div>
+                                            <div style="font-size: 11px; color: #9e9e9e; margin-top: 4px;">${daysText}</div>
                                         </td>
                                     </tr>
                                     `
