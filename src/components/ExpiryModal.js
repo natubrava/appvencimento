@@ -149,8 +149,8 @@ export default function ExpiryModal({ product, initialData = null, defaultAlertD
                 </div>
 
                 {!isEditing && activeExpiriesCount > 0 && (
-                    <div className="alert alert-warning" style={{ margin: '10px 0', padding: '10px', fontSize: '0.9rem' }}>
-                        <strong>💡 Dica:</strong> Este produto já possui <b>{activeExpiriesCount}</b> vencimento(s) cadastrado(s).
+                    <div className="alert alert-warning" style={{ margin: '15px 0', padding: '12px', fontSize: '0.95rem', backgroundColor: '#fff9c4', color: '#826008', border: '1px solid #fde047', borderRadius: '8px' }}>
+                        <strong>⚠️ Certifique-se antes de incluir:</strong> Este produto já possui <b>{activeExpiriesCount}</b> vencimento(s) cadastrado(s).
                     </div>
                 )}
 
