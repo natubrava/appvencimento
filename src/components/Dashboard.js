@@ -73,12 +73,25 @@ export default function Dashboard() {
         loadStats();
     }
 
+    async function handleTogglePromo(record) {
+        try {
+            const newStatus = !record.is_promoted;
+            const { updateExpiryRecord } = await import('@/lib/supabase');
+            await updateExpiryRecord(record.id, { is_promoted: newStatus });
+            loadStats();
+        } catch (err) {
+            console.error('Erro ao atualizar promoção:', err);
+            // Optionally could use a toast here if imported
+        }
+    }
+
     // Ordenar registros: vencidos primeiro, depois por data mais próxima
     const sortedRecords = [...(stats.records || [])].sort((a, b) => {
         return new Date(a.expiry_date) - new Date(b.expiry_date);
     });
 
-    const urgentRecords = sortedRecords.slice(0, 15);
+    // Todos os registros ordenados (removendo o filtro restritivo a pedido do usuário)
+    const urgentRecords = sortedRecords;
 
     if (loading) {
         return (
@@ -139,7 +152,7 @@ export default function Dashboard() {
             </div>
 
             <div className="dashboard-section">
-                <h2 className="section-title">⚠️ Itens Mais Urgentes</h2>
+                <h2 className="section-title">📦 Vencimentos Ativos</h2>
 
                 {urgentRecords.length === 0 ? (
                     <div className="empty-state">
@@ -180,6 +193,9 @@ export default function Dashboard() {
                                                 {status === 'ok' && `${days} dias restantes`}
                                             </span>
                                             <span className="urgent-date">{formatDate(record.expiry_date)}</span>
+                                            {record.is_promoted && (
+                                                <span className="promo-tag" style={{ marginLeft: '8px', fontSize: '0.75rem', backgroundColor: '#fef08a', color: '#854d0e', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>🟡 Em Promoção</span>
+                                            )}
                                         </div>
                                         <div className="urgent-actions-mobile" style={{ display: 'flex', gap: '6px' }}>
                                             {isStockDiscrepancy && (
@@ -192,6 +208,13 @@ export default function Dashboard() {
                                                     ⚠️ Estoque!
                                                 </button>
                                             )}
+                                            <button
+                                                className={`btn btn-sm ${record.is_promoted ? 'btn-warning' : 'btn-action'}`}
+                                                onClick={() => handleTogglePromo(record)}
+                                                title={record.is_promoted ? "Remover Promoção" : "Marcar como Promoção"}
+                                            >
+                                                🏷️
+                                            </button>
                                             <button
                                                 className="btn btn-sm btn-action"
                                                 onClick={() => handleEdit(record)}

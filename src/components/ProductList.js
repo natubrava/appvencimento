@@ -185,6 +185,18 @@ export default function ProductList({ defaultAlertDays = 30 }) {
         loadData();
     }
 
+    async function handleTogglePromo(record) {
+        try {
+            const newStatus = !record.is_promoted;
+            const { updateExpiryRecord } = await import('@/lib/supabase');
+            await updateExpiryRecord(record.id, { is_promoted: newStatus });
+            toast.success(newStatus ? 'Marcado como Promoção!' : 'Promoção removida', { duration: 2000 });
+            loadData();
+        } catch (err) {
+            toast.error('Erro ao atualizar promoção: ' + err.message);
+        }
+    }
+
     function handleBarcodeDetected(code) {
         setShowScanner(false);
         toast.success(`Código Lido: ${code}`, { duration: 3000 });
@@ -395,6 +407,9 @@ export default function ProductList({ defaultAlertDays = 30 }) {
                                                             <div className="expiry-detail-info">
                                                                 <span className="expiry-detail-date">
                                                                     📅 {formatDate(record.expiry_date)}
+                                                                    {record.is_promoted && (
+                                                                        <span className="promo-tag" style={{ marginLeft: '6px', fontSize: '0.70rem', backgroundColor: '#fef08a', color: '#854d0e', padding: '1px 5px', borderRadius: '4px', fontWeight: 'bold' }}>🟡 Promoção</span>
+                                                                    )}
                                                                 </span>
                                                                 {record.batch_label && <span className="expiry-detail-batch">Lote: {record.batch_label}</span>}
                                                                 {record.quantity > 1 && <span className="expiry-detail-qty">Qtd: {record.quantity}</span>}
@@ -410,6 +425,13 @@ export default function ProductList({ defaultAlertDays = 30 }) {
                                                                 </span>
                                                             </div>
                                                             <div className="expiry-detail-actions">
+                                                                <button
+                                                                    className={`btn btn-xs ${record.is_promoted ? 'btn-warning' : 'btn-action'}`}
+                                                                    onClick={() => handleTogglePromo(record)}
+                                                                    title={record.is_promoted ? "Remover Promoção" : "Marcar como Promoção"}
+                                                                >
+                                                                    🏷️
+                                                                </button>
                                                                 <button
                                                                     className="btn btn-xs btn-action"
                                                                     onClick={() => handleEdit(record, product)}
@@ -461,6 +483,7 @@ export default function ProductList({ defaultAlertDays = 30 }) {
                 <ExpiryModal
                     product={selectedProduct}
                     defaultAlertDays={defaultAlertDays}
+                    activeExpiriesCount={(expiryBySku[selectedProduct.sku] || []).filter(r => r.status === 'active').length}
                     onClose={() => { setShowExpiryModal(false); setSelectedProduct(null); }}
                     onComplete={handleExpiryComplete}
                 />
@@ -479,6 +502,7 @@ export default function ProductList({ defaultAlertDays = 30 }) {
                     product={selectedProduct}
                     initialData={selectedRecord}
                     defaultAlertDays={defaultAlertDays}
+                    activeExpiriesCount={(expiryBySku[selectedProduct.sku] || []).filter(r => r.status === 'active').length}
                     onClose={() => { setShowEditModal(false); setSelectedRecord(null); setSelectedProduct(null); }}
                     onComplete={handleEditComplete}
                 />

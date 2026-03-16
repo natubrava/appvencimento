@@ -5,11 +5,20 @@ const resendApiKey = Deno.env.get("RESEND_API_KEY")
 const supabaseUrl = Deno.env.get("SUPABASE_URL")
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 serve(async (req) => {
+    if (req.method === 'OPTIONS') {
+        return new Response('ok', { headers: corsHeaders })
+    }
+
     if (req.method !== "POST") {
         return new Response(JSON.stringify({ error: "Method Not Allowed" }), { 
             status: 405, 
-            headers: { "Content-Type": "application/json" } 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
         })
     }
 
@@ -41,13 +50,11 @@ serve(async (req) => {
 
         if (!expiryRecords || expiryRecords.length === 0) {
             return new Response(JSON.stringify({ message: "No active products." }), { 
-                headers: { "Content-Type": "application/json" } 
+                headers: { ...corsHeaders, "Content-Type": "application/json" } 
             })
         }
 
-        const expiredItems = []
-        const urgentItems = []
-        const warningItems = []
+        const expiringItems = []
 
         expiryRecords.forEach(record => {
             const expDate = new Date(record.expiry_date);
@@ -60,94 +67,86 @@ serve(async (req) => {
             const diffTime = (objDateLocal.getTime() - todayLocal.getTime());
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-            let status = 'ok';
-            if (diffDays <= 0) {
-                status = 'expired';
-                expiredItems.push({...record, days: diffDays});
-            } else if (diffDays <= alertRedDays) {
-                status = 'urgent';
-                urgentItems.push({...record, days: diffDays});
-            } else if (diffDays <= alertYellowDays) {
-                status = 'warning';
-                warningItems.push({...record, days: diffDays});
+            if (diffDays <= alertYellowDays) {
+                expiringItems.push({...record, days: diffDays, expDateObj: objDateLocal});
             }
         });
 
-        if (expiredItems.length === 0 && urgentItems.length === 0 && warningItems.length === 0) {
+        if (expiringItems.length === 0) {
             return new Response(JSON.stringify({ message: "No items expiring soon or expired." }), { 
-                headers: { "Content-Type": "application/json" } 
+                headers: { ...corsHeaders, "Content-Type": "application/json" } 
             })
         }
 
-        let htmlBody = `
-            <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-                <h2 style="color: #2c3e50; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 15px;">Alerta de Vencimentos - NatuBrava</h2>
-                <p>Aqui está o resumo dos produtos que requerem atenção hoje (${new Date().toLocaleDateString('pt-BR')}).</p>
-        `
+        // Sort items by expiration date (most overdue first)
+        expiringItems.sort((a, b) => a.days - b.days);
 
-        if (expiredItems.length > 0) {
-            htmlBody += `
-                <div style="background-color: #fff3f3; border-left: 4px solid #721c24; padding: 10px 15px; margin-bottom: 20px;">
-                    <h3 style="color: #721c24; margin-top: 0;">⚫ Vencidos (${expiredItems.length})</h3>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr style="border-bottom: 1px solid #f5c6cb; text-align: left;">
-                            <th style="padding: 5px;">Produto</th><th style="padding: 5px;">Dias</th><th style="padding: 5px;">Qtd</th>
-                        </tr>
-                        ${expiredItems.map(item => `
-                            <tr>
-                                <td style="padding: 5px; font-size: 14px;">${item.product_name} (SKU: ${item.sku})</td>
-                                <td style="padding: 5px; font-size: 14px; color: #721c24; font-weight: bold;">Vencido há ${Math.abs(item.days)}d</td>
-                                <td style="padding: 5px; font-size: 14px;">${item.quantity || 1}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
+        const vencidosCount = expiringItems.filter(i => i.days < 0).length;
+        const hojeCount = expiringItems.filter(i => i.days === 0).length;
+        const proximosCount = expiringItems.filter(i => i.days > 0).length;
+
+        const reportDateObj = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+        const reportDateStr = `${String(reportDateObj.getDate()).padStart(2, '0')}/${String(reportDateObj.getMonth() + 1).padStart(2, '0')}/${reportDateObj.getFullYear()}`;
+
+        const htmlBody = `
+            <div style="font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px 0;">
+                <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                    <!-- Header -->
+                    <div style="background: linear-gradient(135deg, #1e8449, #2ecc71); text-align: center; padding: 30px 20px 45px; color: white;">
+                        <h2 style="margin: 0; font-size: 24px; font-weight: bold;">🌿 NatuBrava - Alertas de Vencimento</h2>
+                        <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Resumo do dia ${reportDateStr}</p>
+                    </div>
+
+                    <!-- Summary Cards Container -->
+                    <div style="display: flex; justify-content: space-between; margin: -25px 20px 20px 20px; gap: 10px;">
+                        <!-- Vencidos -->
+                        <div style="background: #fff0f0; border-radius: 10px; padding: 15px 10px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="font-size: 26px; font-weight: bold; color: #e53935; line-height: 1;">${vencidosCount}</div>
+                            <div style="font-size: 13px; color: #9e9e9e; margin-top: 5px;">Vencidos</div>
+                        </div>
+                        <!-- Vencem Hoje -->
+                        <div style="background: #fff0f0; border-radius: 10px; padding: 15px 10px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="font-size: 26px; font-weight: bold; color: #e53935; line-height: 1;">${hojeCount}</div>
+                            <div style="font-size: 13px; color: #9e9e9e; margin-top: 5px;">Vencem Hoje</div>
+                        </div>
+                        <!-- Próximos -->
+                        <div style="background: #fffdf5; border-radius: 10px; padding: 15px 10px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="font-size: 26px; font-weight: bold; color: #fbc02d; line-height: 1;">${proximosCount}</div>
+                            <div style="font-size: 13px; color: #9e9e9e; margin-top: 5px;">Próximos</div>
+                        </div>
+                    </div>
+
+                    <!-- List -->
+                    <div style="padding: 0 20px 20px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <th style="text-align: left; padding-bottom: 15px; font-size: 12px; color: #757575; letter-spacing: 0.5px;">PRODUTO</th>
+                                    <th style="text-align: right; padding-bottom: 15px; font-size: 12px; color: #757575; letter-spacing: 0.5px;">VALIDADE</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${expiringItems.map(item => {
+                                    const expDateStr = String(item.expDateObj.getDate()).padStart(2, '0') + '/' + String(item.expDateObj.getMonth() + 1).padStart(2, '0') + '/' + item.expDateObj.getFullYear();
+                                    return `
+                                    <tr style="border-bottom: 1px solid #eee;">
+                                        <td style="padding: 15px 0; padding-right: 15px;">
+                                            <div style="font-weight: bold; font-size: 13px; color: #212121; line-height: 1.4; text-transform: uppercase;">${item.product_name}</div>
+                                            <div style="font-size: 12px; color: #9e9e9e; margin-top: 4px;">Lote: ${item.sku || '-'}</div>
+                                        </td>
+                                        <td style="text-align: right; padding: 15px 0; font-size: 14px; color: #212121; vertical-align: top;">
+                                            ${expDateStr}
+                                        </td>
+                                    </tr>
+                                    `
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            `
-        }
-
-        if (urgentItems.length > 0) {
-            htmlBody += `
-                <div style="background-color: #fff8eb; border-left: 4px solid #e74c3c; padding: 10px 15px; margin-bottom: 20px;">
-                    <h3 style="color: #e74c3c; margin-top: 0;">🔴 Urgente (${urgentItems.length}) - Menos de ${alertRedDays} dias</h3>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr style="border-bottom: 1px solid #fbeed5; text-align: left;">
-                            <th style="padding: 5px;">Produto</th><th style="padding: 5px;">Vence Em</th><th style="padding: 5px;">Qtd</th>
-                        </tr>
-                        ${urgentItems.map(item => `
-                            <tr>
-                                <td style="padding: 5px; font-size: 14px;">${item.product_name} (SKU: ${item.sku})</td>
-                                <td style="padding: 5px; font-size: 14px; color: #e74c3c; font-weight: bold;">${item.days}d</td>
-                                <td style="padding: 5px; font-size: 14px;">${item.quantity || 1}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                </div>
-            `
-        }
-
-        if (warningItems.length > 0) {
-            htmlBody += `
-                <div style="background-color: #fffdf5; border-left: 4px solid #f1c40f; padding: 10px 15px; margin-bottom: 20px;">
-                    <h3 style="color: #d4ac0d; margin-top: 0;">🟡 Atenção (${warningItems.length}) - Menos de ${alertYellowDays} dias</h3>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr style="border-bottom: 1px solid #fcf7d7; text-align: left;">
-                            <th style="padding: 5px;">Produto</th><th style="padding: 5px;">Vence Em</th><th style="padding: 5px;">Qtd</th>
-                        </tr>
-                        ${warningItems.map(item => `
-                            <tr>
-                                <td style="padding: 5px; font-size: 14px;">${item.product_name} (SKU: ${item.sku})</td>
-                                <td style="padding: 5px; font-size: 14px; color: #d4ac0d; font-weight: bold;">${item.days}d</td>
-                                <td style="padding: 5px; font-size: 14px;">${item.quantity || 1}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                </div>
-            `
-        }
-
-        htmlBody += `
-                <div style="margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px;">
-                    <a href="https://controle-vencimento-natu.vercel.app/" style="background-color: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Acessar Sistema</a>
+                
+                <div style="text-align: center; padding: 30px 20px 10px;">
+                    <a href="https://natubrava.github.io/appvencimento/" style="background-color: #5d6d7e; color: white; padding: 14px 30px; text-decoration: none; border-radius: 30px; font-weight: bold; display: inline-block; font-size: 15px;">Acessar Sistema</a>
                 </div>
             </div>
         `
@@ -172,14 +171,14 @@ serve(async (req) => {
         }
 
         return new Response(JSON.stringify({ message: "Daily report email sent successfully!" }), { 
-            headers: { "Content-Type": "application/json" } 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
         })
 
     } catch (err) {
         console.error("Function error:", err.message)
         return new Response(JSON.stringify({ error: err.message }), { 
             status: 500, 
-            headers: { "Content-Type": "application/json" } 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
         })
     }
 })

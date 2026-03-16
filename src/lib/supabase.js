@@ -53,6 +53,7 @@ export async function createExpiryRecord(record) {
             alert_days: record.alert_days || 30,
             notes: record.notes || '',
             notify_channels: record.notify_channels || 'all',
+            is_promoted: !!record.is_promoted,
             status: 'active'
         }])
         .select()
@@ -71,6 +72,11 @@ export async function updateExpiryRecord(id, record) {
         notes: record.notes || '',
         notify_channels: record.notify_channels || 'all'
     };
+    
+    // Apenas atualizar is_promoted se ele for fornecido no objeto record (pode não estar em chamadas parciais)
+    if (record.is_promoted !== undefined) {
+        updateData.is_promoted = !!record.is_promoted;
+    }
 
     const { data, error } = await supabase
         .from('expiry_records')

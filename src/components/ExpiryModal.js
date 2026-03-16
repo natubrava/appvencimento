@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createExpiryRecord, updateExpiryRecord, deleteExpiryRecord } from '@/lib/supabase';
 import { daysUntilExpiry, getExpiryStatus, getExpiryStatusLabel } from '@/lib/utils';
 
-export default function ExpiryModal({ product, initialData = null, defaultAlertDays = 30, onClose, onComplete }) {
+export default function ExpiryModal({ product, initialData = null, defaultAlertDays = 30, activeExpiriesCount = 0, onClose, onComplete }) {
     const isEditing = !!initialData;
 
     const [formData, setFormData] = useState({
@@ -13,7 +13,8 @@ export default function ExpiryModal({ product, initialData = null, defaultAlertD
         quantity: initialData ? (initialData.quantity || 1) : 1,
         alert_days: initialData ? (initialData.alert_days || defaultAlertDays) : defaultAlertDays,
         notes: initialData ? (initialData.notes || '') : '',
-        notify_channels: initialData ? (initialData.notify_channels || 'all') : 'all'
+        notify_channels: initialData ? (initialData.notify_channels || 'all') : 'all',
+        is_promoted: initialData ? !!initialData.is_promoted : false
     });
     
     const [dateInput, setDateInput] = useState(() => {
@@ -147,6 +148,12 @@ export default function ExpiryModal({ product, initialData = null, defaultAlertD
                     </div>
                 </div>
 
+                {!isEditing && activeExpiriesCount > 0 && (
+                    <div className="alert alert-warning" style={{ margin: '10px 0', padding: '10px', fontSize: '0.9rem' }}>
+                        <strong>💡 Dica:</strong> Este produto já possui <b>{activeExpiriesCount}</b> vencimento(s) cadastrado(s).
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="modal-form">
                     <div className="form-group">
                         <label htmlFor="expiry_date">Data de Vencimento *</label>
@@ -273,6 +280,32 @@ export default function ExpiryModal({ product, initialData = null, defaultAlertD
                                     </div>
                                 </label>
                             ))}
+                        </div>
+                    </div>
+
+                    <div className="form-group" style={{ 
+                        background: formData.is_promoted ? '#fffde7' : '#f9fafb', 
+                        padding: '12px', 
+                        borderRadius: '8px', 
+                        border: formData.is_promoted ? '1px solid #f1c40f' : '1px solid #e5e7eb',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px'
+                    }}>
+                        <input
+                            type="checkbox"
+                            id="is_promoted"
+                            checked={formData.is_promoted}
+                            onChange={e => setFormData({ ...formData, is_promoted: e.target.checked })}
+                            style={{ width: '20px', height: '20px', accentColor: '#f1c40f', cursor: 'pointer' }}
+                        />
+                        <div style={{ flex: 1 }}>
+                            <label htmlFor="is_promoted" style={{ margin: 0, color: '#b7950b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                🟡 Produto em Promoção
+                            </label>
+                            <p className="form-hint" style={{ margin: '4px 0 0 0' }}>
+                                Marque se este lote/produto já está com placa de promoção na loja física.
+                            </p>
                         </div>
                     </div>
 
