@@ -84,7 +84,10 @@ export async function fetchProducts() {
     let response;
     try {
         response = await fetch(SHEET_CSV_URL, {
-            headers: { 'Accept': 'text/csv,text/plain,*/*', 'Cache-Control': 'no-cache' }
+            // `Cache-Control` is not a CORS-safelisted request header. Sending it
+            // makes the browser preflight Google's public CSV endpoint, and that
+            // preflight is rejected even though the CSV itself allows CORS.
+            headers: { 'Accept': 'text/csv,text/plain,*/*' }
         });
         if (!response.ok) throw new Error('Acesso direto falhou');
     } catch (e) {
