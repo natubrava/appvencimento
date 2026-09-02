@@ -132,7 +132,11 @@ export default function NotificationPanel({ onClose, stockDiscrepancies = [] }) 
                                             key={`stock-${alert.sku}`}
                                             href={`/products?sku=${encodeURIComponent(alert.sku)}`}
                                             className="notification-item notification-stock-alert"
-                                            onClick={onClose}
+                                            onClick={event => {
+                                                event.preventDefault();
+                                                onClose();
+                                                window.location.assign(event.currentTarget.href);
+                                            }}
                                         >
                                             <span className="notification-item-icon">📦</span>
                                             <div className="notification-item-content">
