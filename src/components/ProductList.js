@@ -48,6 +48,8 @@ export default function ProductList({ defaultAlertDays = 30 }) {
     }, []);
 
     useEffect(() => {
+        const requestedSku = new URLSearchParams(window.location.search).get('sku');
+        if (requestedSku) setSearchTerm(requestedSku);
         loadData();
     }, [loadData]);
 

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { getAllNotifications, markNotificationSeen, markAllNotificationsSeen } from '@/lib/notifications';
 import { formatDate, daysUntilExpiry } from '@/lib/utils';
 
-export default function NotificationPanel({ onClose }) {
+export default function NotificationPanel({ onClose, stockDiscrepancies = [] }) {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -113,14 +114,42 @@ export default function NotificationPanel({ onClose }) {
                             <div className="spinner" style={{ width: 24, height: 24 }}></div>
                             <span>Carregando...</span>
                         </div>
-                    ) : notifications.length === 0 ? (
+                    ) : notifications.length === 0 && stockDiscrepancies.length === 0 ? (
                         <div className="notification-empty">
                             <span className="notification-empty-icon">✅</span>
                             <p>Nenhuma notificação no momento</p>
-                            <p className="text-muted">Os alertas aparecerão aqui quando itens estiverem próximos do vencimento.</p>
+                            <p className="text-muted">Os alertas aparecerão aqui quando houver vencimentos ou divergências de estoque.</p>
                         </div>
                     ) : (
                         <div className="notification-list">
+                            {stockDiscrepancies.length > 0 && (
+                                <div className="stock-notification-section">
+                                    <div className="stock-notification-title">
+                                        ⚠️ Estoque físico menor que o cadastrado ({stockDiscrepancies.length})
+                                    </div>
+                                    {stockDiscrepancies.map(alert => (
+                                        <Link
+                                            key={`stock-${alert.sku}`}
+                                            href={`/products?sku=${encodeURIComponent(alert.sku)}`}
+                                            className="notification-item notification-stock-alert"
+                                            onClick={onClose}
+                                        >
+                                            <span className="notification-item-icon">📦</span>
+                                            <div className="notification-item-content">
+                                                <span className="notification-item-message">
+                                                    {alert.productName} — estoque {alert.physicalStock}; cadastrado {alert.registeredQuantity}
+                                                </span>
+                                                <span className="notification-item-rule">
+                                                    Toque para informar se foi vendido, descartado ou resolvido.
+                                                </span>
+                                            </div>
+                                            <div className="notification-item-meta">
+                                                <span className="notification-dot"></span>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
                             {notifications.map(notification => {
                                 const rule = notification.notification_rules;
                                 return (

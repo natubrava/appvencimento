@@ -1555,6 +1555,28 @@ body {
   flex-direction: column;
 }
 
+.stock-notification-section {
+  border-bottom: 2px solid #f59e0b;
+}
+
+.stock-notification-title {
+  padding: 12px 20px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.notification-stock-alert {
+  background: #fff7ed;
+  border-left: 3px solid #f59e0b;
+  text-decoration: none;
+}
+
+.notification-stock-alert:hover {
+  background: #ffedd5;
+}
+
 .notification-item {
   display: flex;
   align-items: flex-start;
